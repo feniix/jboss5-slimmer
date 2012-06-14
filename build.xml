@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<project name="jboss-slimmer" basedir="." default="help">
+    <!-- Properties file used to set the parameters for the slimmed instance -->
+    <property file="instance.properties" />
+    <!-- location of the checkout of the entire jboss installation directory -->
+    <property name="base.jboss.dir" value="${checkout.base.dir}/jboss-base" />
+    <!-- path in the svn repository for the checkout -->
+    <property name="repo.template.base.url" value="${repo.root.url}/server"/>
+    <!-- location of the checkout of the template -->
+    <property name="base.template.dir" value="${checkout.base.dir}/${jboss.template.name}" />
+    <property name="jboss.instance.dest.dir" value="${jboss.home}/server/${jboss.instance.name}" />
+    <!-- Need to have ant and antcontrib installed in order to run the script -->
+    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+        <classpath>
+            <pathelement location="lib/ant-contrib-1.0b3.jar" />
+        </classpath>
+    </taskdef>
+
+    <target name="help">
+        <echo message="Use the source Luke."/>
+    </target>
+    
+    <!-- clean up all the checkouts and the last created instance 
+         USE CAREFULLY
+    -->
+    <target name="dist-clean">
+        <antcall target="clean-template" />
+        <antcall target="clean-jboss-base" />
+        <delete dir="${instance.dest.dir}" />
+    </target>
+    
+    <!-- clean the checked out directories -->
+    <target name="clean-template">
+        <delete dir="${base.template.dir}" />
+    </target>
+    
+    <!-- clean the checked out jboss base directory -->
+    <target name="clean-jboss-base">
+        <delete dir="${base.jboss.dir}" />
+    </target>
+
+    <target name="checkout-base-from-svn">
+        <echo message="Checking out from ${repo.root.url} into ${base.jboss.dir}" />
+        <antcall target="clean-jboss-base" />
+        <mkdir dir="${base.jboss.dir}"/>
+        <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.jboss.dir}" fork="true">
+            <arg value="export" />
+            <arg value="${repo.root.url}" />
+            <classpath>
+                <pathelement location="lib/svnkit-1.3.7.jar" />
+                <pathelement location="lib/svnkit-cli-1.3.7.jar" />
+                <pathelement location="lib/sequence-library-1.0.0.jar" />
+            </classpath>
+        </java>
+    </target>
+
+    <target name="install-base-jboss" >
+        <echo message="Installing base server onto ${jboss.home}" />
+        <antcall target="checkout-base-from-svn" />
+        <echo message="Deleting server profiles" />
+        <delete verbose="false" quiet="true" includeemptydirs="true">
+            <fileset dir="${base.jboss.dir}/jboss-as/server/standard" />
+            <fileset dir="${base.jboss.dir}/jboss-as/server/production" />
+            <fileset dir="${base.jboss.dir}/jboss-as/server/all" />
+            <fileset dir="${base.jboss.dir}/jboss-as/server/default" />
+            <fileset dir="${base.jboss.dir}/jboss-as/server/web" />
+            <fileset dir="${base.jboss.dir}/jboss-as/server/minimal" />
+        </delete>
+        <mkdir dir="${jboss.home}" />
+        <copy todir="${jboss.home}">
+            <fileset dir="${base.jboss.dir}/jboss-as" />
+        </copy>
+
+        <echo message="Architecture platform is: ${platform.arch}" />
+        <if>
+            <equals arg1="${platform.arch}" arg2="x86" />
+            <then>
+                <echo message="installing native connectors for ${platform.arch}" />
+            </then>
+            <elseif>
+                <equals arg1="${platform.arch}" arg2="x64" />
+                <then>
+                    <echo message="installing native connectors for ${platform.arch}" />
+                </then>
+            </elseif>
+            <else>
+                <echo message="Native connectors for platform is not supported" />
+            </else>
+        </if>
+    </target>
+
+    <target name="checkout-template-from-svn">
+        <delete dir="${base.template.dir}" />
+        <echo message="Checking out template from ${repo.template.base.url}/${template.name}" />
+        <java classname="org.tmatesoft.svn.cli.SVN" dir="${checkout.base.dir}" fork="true">
+            <arg value="export" />
+            <arg value="${repo.template.base.url}/${jboss.template.name}" />
+            <classpath>
+                <pathelement location="lib/svnkit-1.3.7.jar" />
+                <pathelement location="lib/svnkit-cli-1.3.7.jar" />
+                <pathelement location="lib/sequence-library-1.0.0.jar" />
+            </classpath>
+        </java>
+    </target>
+
+    <target name="create-jboss-instance" >
+
+    </target>
+    
+</project>

@@ -1,0 +1,29 @@
+# JBoss EAP 4.3 Home
+jboss.home=/home/otaeguis/dev/jboss-eap-4.3/jboss-as
+
+repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss/cp10/jboss-eap-4.3/jboss-as/server
+checkout.base.dir=/tmp
+
+# Name of generated instance
+instance.name=slimAll
+
+# Profile used as based for slimmed instance (all|default|minimal|production)
+template.name=production
+
+# Remove features (y|n)
+disable.messaging=true
+disable.ejb=true
+disable.mail=true
+disable.quartz=true
+disable.juddi=true
+disable.uuid=true
+disable.bshdeployer=true
+disable.jbossws=true
+disable-hotdeploy=true
+disable.snmp=true
+disable.mailmonitor=true
+disable.jmsqueues=true
+disable.corba-iiop=true
+disable-usertransaction=true
+disable.farm=true
+disable.console.logging=true
