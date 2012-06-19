@@ -1,25 +1,23 @@
 <?xml version="1.0"?>
-<project name="jboss-slimmer" basedir="." default="help">
+<project name="jboss5-slimmer" basedir="." default="help">
     <!-- Properties file used to set the parameters for the slimmed instance -->
     <property file="instance.properties" />
     <!-- location of the checkout of the entire jboss installation directory -->
     <property name="base.jboss.dir" value="${checkout.base.dir}/jboss-base" />
     <!-- path in the svn repository for the checkout -->
-    <property name="repo.template.base.url" value="${repo.root.url}/server"/>
+    <property name="repo.template.base.url" value="${repo.root.url}/server" />
     <!-- location of the checkout of the template -->
     <property name="base.template.dir" value="${checkout.base.dir}/${jboss.template.name}" />
     <property name="jboss.instance.dest.dir" value="${jboss.home}/server/${jboss.instance.name}" />
     <!-- Need to have ant and antcontrib installed in order to run the script -->
-    <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+    <taskdef resource="net/sf/antcontrib/antlib.xml">
         <classpath>
             <pathelement location="lib/ant-contrib-1.0b3.jar" />
         </classpath>
     </taskdef>
-
     <target name="help">
-        <echo message="Use the source Luke."/>
+        <echo message="Use the source Luke." />
     </target>
-    
     <!-- clean up all the checkouts and the last created instance 
          USE CAREFULLY
     -->
@@ -28,21 +26,18 @@
         <antcall target="clean-jboss-base" />
         <delete dir="${instance.dest.dir}" />
     </target>
-    
     <!-- clean the checked out directories -->
     <target name="clean-template">
         <delete dir="${base.template.dir}" />
     </target>
-    
     <!-- clean the checked out jboss base directory -->
     <target name="clean-jboss-base">
         <delete dir="${base.jboss.dir}" />
     </target>
-
     <target name="checkout-base-from-svn">
         <echo message="Checking out from ${repo.root.url} into ${base.jboss.dir}" />
         <antcall target="clean-jboss-base" />
-        <mkdir dir="${base.jboss.dir}"/>
+        <mkdir dir="${base.jboss.dir}" />
         <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.jboss.dir}" fork="true">
             <arg value="export" />
             <arg value="${repo.root.url}" />
@@ -53,8 +48,7 @@
             </classpath>
         </java>
     </target>
-
-    <target name="install-base-jboss" >
+    <target name="create-jboss-base-install">
         <echo message="Installing base server onto ${jboss.home}" />
         <antcall target="checkout-base-from-svn" />
         <echo message="Deleting server profiles" />
@@ -70,7 +64,6 @@
         <copy todir="${jboss.home}">
             <fileset dir="${base.jboss.dir}/jboss-as" />
         </copy>
-
         <echo message="Architecture platform is: ${platform.arch}" />
         <if>
             <equals arg1="${platform.arch}" arg2="x86" />
@@ -88,7 +81,6 @@
             </else>
         </if>
     </target>
-
     <target name="checkout-template-from-svn">
         <delete dir="${base.template.dir}" />
         <echo message="Checking out template from ${repo.template.base.url}/${template.name}" />
@@ -102,9 +94,210 @@
             </classpath>
         </java>
     </target>
-
-    <target name="create-jboss-instance" >
-
+    <target name="disable-management-console">
+        <if>
+            <equals arg1="${disable.management-console}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting management console components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="false" quiet="true" includeemptydirs="true">
+                    <fileset dir="${base.template.dir}/deploy/management" />
+                    <fileset dir="${base.template.dir}/deploy/admin-console.war" />
+                </delete>
+            </then>
+        </if>
     </target>
-    
+    <target name="disable-jmx-console">
+        <if>
+            <equals arg1="${disable.jmx-console}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting JMX console components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="false" quiet="true" includeemptydirs="true">
+                    <fileset dir="${base.template.dir}/deploy/jmx-console.war" />
+                </delete>
+            </then>
+        </if>
+    </target>
+    <target name="disable-ejb3">
+        <if>
+            <equals arg1="${disable.ejb3}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting EJB3 components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb3-connectors-jboss-beans.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb3-container-jboss-beans.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb3-interceptors-aop.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb3-timerservice-jboss-beans.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/profile-service-secured.jar" />
+                <delete verbose="true" file="${base.template.dir}/deployers/jboss-ejb3-endpoint-deployer.jar" />
+                <delete verbose="true" file="${base.template.dir}/deployers/ejb3-deployers-jboss-beans.xml" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-ejb2">
+        <if>
+            <equals arg1="${disable.ejb2}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting EJB2 components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb2-container-jboss-beans.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/ejb2-timer-service.xml" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-juddi">
+        <if>
+            <equals arg1="${disable.juddi}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting JUDDI components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/juddi-service.sar" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-uuid">
+        <if>
+            <equals arg1="${disable.uuid}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting uuid (key generator) components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/uuid-key-generator.sar" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-messaging">
+        <if>
+            <equals arg1="${disable.messaging}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting java messaging svc components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/conf/props/messaging-roles.properties" />
+                <delete verbose="true" file="${base.template.dir}/conf/props/messaging-users.properties" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/messaging" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/jms-ra.rar" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/quartz-ra.rar" />
+                <delete verbose="true" dir="${base.template.dir}/deployers/messaging-definitions-jboss-beans.xml" />
+            </then>
+        </if>
+        <!--<replace file="${base.template.dir}/conf/jboss-service.xml" />-->
+    </target>
+    <target name="disable-mail">
+        <if>
+            <equals arg1="${disable.mail}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting mail components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/deploy/mail-service.xml" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/mail-ra.rar" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-defaultds">
+        <if>
+            <equals arg1="${disable.defaultds}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting default datasource components from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/deploy/hsqldb-ds.xml" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-bshdeployer">
+        <if>
+            <equals arg1="${disable.bshdeployer}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting bsh deployer from deployers directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" dir="${base.template.dir}/deployers/bsh.deployer" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-hotdeployer">
+        <if>
+            <equals arg1="${disable.hotdeployer}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting hot deployer from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" dir="${base.template.dir}/deployers/bsh.deployer" />
+            </then>
+        </if>
+    </target>
+    <target name="set-hotdeployer-timesample">
+        <condition property="set.hotdeployer.timesample" value="5000">
+            <not>
+                <isset property="set.hotdeployer.timesample" />
+            </not>
+        </condition>
+        <if>
+            <!-- We only process the time sample if the hotdeployer is enabled -->
+            <equals arg1="${disable.hotdeployer}" arg2="false" />
+            <then>
+                <echo message="###########################################" />
+                <echo message="# Setting hot deployer sample to ${set.hotdeployer.timesample}ms #" />
+                <echo message="###########################################" />
+                <replace file="${base.template.dir}/deploy/hdscanner-jboss-beans.xml" token="60000" value="${set.hotdeployer.timesample}" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-jbossws">
+        <if>
+            <equals arg1="${disable.jbossws}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting jboss web services from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/conf/jax-ws-catalog.xml" />
+                <delete verbose="true" file="${base.template.dir}/conf/props/jbossws-roles.properties" />
+                <delete verbose="true" file="${base.template.dir}/conf/props/jbossws-users.properties" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/jbossws.sar" />
+                <delete verbose="true" dir="${base.template.dir}/deploy/jbossws-console.war" />
+                <delete verbose="true" dir="${base.template.dir}/deployers/jbossws.deployer" />
+            </then>
+        </if>
+    </target>
+    <target name="disable-scheduling">
+        <if>
+            <equals arg1="${disable.scheduling}" arg2="true" />
+            <then>
+                <echo message="###################################################################" />
+                <echo message="# Deleting scheduling services from deploy directory #" />
+                <echo message="###################################################################" />
+                <delete verbose="true" file="${base.template.dir}/deploy/schedule-manager-service.xml" />
+                <delete verbose="true" file="${base.template.dir}/deploy/scheduler-service.xml" />
+            </then>
+        </if>
+    </target>
+    <target name="create-jboss-instance">
+        <antcall target="checkout-template-from-svn" />
+        <echo message="Deleting default ROOT.war from template" />
+        <delete verbose="false" quiet="true" includeemptydirs="true" dir="${base.template.dir}/deploy/ROOT.war" />
+        <antcall target="disable-management-console" />
+        <antcall target="disable-jmx-console" />
+        <antcall target="disable-uuid" />
+        <antcall target="disable-mail" />
+        <antcall target="disable-ejb3" />
+        <antcall target="disable-ejb2" />
+        <antcall target="disable-juddi" />
+        <antcall target="disable-bshdeployer" />
+        <antcall target="disable-hotdeployer" />
+        <antcall target="set-hotdeployer-timesample" />
+        <antcall target="disable-jbossws" />
+        <antcall target="disable-scheduling" />
+        <mkdir dir="${jboss.instance.dest.dir}" />
+        <copy todir="${jboss.instance.dest.dir}">
+            <fileset dir="${base.template.dir}" />
+        </copy>
+    </target>
 </project>
