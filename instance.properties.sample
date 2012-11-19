@@ -1,7 +1,7 @@
 # JBoss EAP 4.3 Home
-jboss.home=/home/otaeguis/dev/jboss-eap-4.3/jboss-as
+jboss.home=/home/otaeguis/dev/jboss-eap-5.1/jboss-as
 
-repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss/cp10/jboss-eap-4.3/jboss-as/server
+repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss/....../etc
 checkout.base.dir=/tmp
 
 # Name of generated instance
