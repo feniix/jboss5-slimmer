@@ -1,29 +1,33 @@
-# JBoss EAP 4.3 Home
-jboss.home=/home/otaeguis/dev/jboss-eap-5.1/jboss-as
+# JBoss EAP 5.2 Home
+jboss.home=/tmp/checkout/jboss-eap-5.2/jboss-as
 
-repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss/....../etc
-checkout.base.dir=/tmp
+repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss5/5.2.0/jboss-eap-5.2-vanilla/jboss-as
+checkout.base.dir=/tmp/co
 
 # Name of generated instance
-instance.name=slimAll
+jboss.instance.name=localdev
 
-# Profile used as based for slimmed instance (all|default|minimal|production)
-template.name=production
+# Profile used as base for slimmed instance (all|default|minimal|production)
+jboss.template.name=production
 
-# Remove features (y|n)
-disable.messaging=true
-disable.ejb=true
-disable.mail=true
-disable.quartz=true
-disable.juddi=true
-disable.uuid=true
 disable.bshdeployer=true
-disable.jbossws=true
-disable-hotdeploy=true
-disable.snmp=true
-disable.mailmonitor=true
-disable.jmsqueues=true
 disable.corba-iiop=true
-disable-usertransaction=true
-disable.farm=true
-disable.console.logging=true
+disable.defaultds=true
+disable.ejb2=true
+disable.ejb3=true
+disable.farm-deployer=true
+disable.hotdeployer=true
+disable.jbossws=true
+disable.jmx-console=true
+disable.juddi=true
+disable.mail=true
+disable.management-console=true
+disable.messaging=true
+disable.scheduling=true
+disable.seam=true
+disable.uuid=true
+disable.xaresources=true
+disable.xnio=true
+enable.twg.dir.structure=true
+machine.is.developer=true
+set.hotdeployer.timesample=5000
