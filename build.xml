@@ -3,18 +3,35 @@
     <property name="project.dir" value="." />
     
     <!-- Properties file used to set the parameters for the slimmed instance -->
-	<property file="${project.dir}/instance.${user.name}.properties" />
-	<property file="${project.dir}/instance.properties" />
+    <property file="${project.dir}/instance.${user.name}.properties" />
+    <property file="${project.dir}/instance.${server.name}.properties" />
+    <property file="${project.dir}/instance.properties" />
+    <property file="${project.dir}/security.properties" />
 	
-    <!-- default checkout.base.dir set to /tmp -->
+    <!-- default checkout.base.dir set to /tmp if this is redefined in instance.properties is set to something else-->
     <property name="${checkout.base.dir}" value="/tmp" />
+
     <!-- location of the checkout of the entire jboss installation directory -->
     <property name="base.jboss.dir" value="${checkout.base.dir}/jboss-base" />
-    <!-- path in the svn repository for the checkout -->
-    <property name="repo.template.base.url" value="${repo.root.url}/server" />
+    <property name="base.native.dir" value="${checkout.base.dir}/native" />
+
     <!-- location of the checkout of the template -->
     <property name="base.template.dir" value="${checkout.base.dir}/${jboss.template.name}" />
-    <property name="jboss.instance.dest.dir" value="${jboss.home}/server/${jboss.instance.name}" />
+    <property name="base.scripts.dir" value="${checkout.base.dir}/scripts" />
+
+    <!-- path in the svn repository for the checkout -->
+    <property name="jboss-base.repo.url" value="${repo.root.url}/${svn.branch}/jboss5/${jboss.version}/${jboss.brand}/jboss-as" />
+    <property name="jboss-common.repo.url" value="${repo.root.url}/${svn.branch}/jboss-common" />
+    <property name="jboss-native.repo.url" value="${jboss-common.repo.url}/jboss-native-${jboss-native.version}" />
+    <property name="jboss-scripts.repo.url" value="${jboss-common.repo.url}/startup-stop-templates" />
+    <property name="jboss-template.base.url" value="${jboss-base.repo.url}/server" />
+
+    <!-- Directory destinations -->
+    <property name="jboss.home.dest.dir" value="${jboss.home}" />
+    <property name="jboss.home.bin.dest.dir" value="${jboss.home}/bin" />
+    <property name="jboss.instance.dest.dir" value="${jboss.home.dest.dir}/server/${jboss.instance.name}" />
+    <!-- line separator prop -->
+    <property name="ls" value="${line.separator}" />
     <!-- Need to have ant and antcontrib installed in order to run the script -->
     <taskdef resource="net/sf/antcontrib/antlib.xml">
         <classpath>
@@ -39,16 +56,32 @@
     <!-- clean the checked out jboss base directory -->
     <target name="clean-jboss-base">
         <delete dir="${base.jboss.dir}" />
+        <mkdir dir="${base.jboss.dir}" />
+        <delete dir="${base.native.dir}" />
+        <mkdir dir="${base.native.dir}" />
     </target>
     <target name="checkout-base-from-svn">
-        <echo message="Checking out from ${repo.root.url} into ${base.jboss.dir}" />
+        <echo message="Checking out from ${jboss-base.repo.url} into ${base.jboss.dir}" />
         <antcall target="clean-jboss-base" />
-        <mkdir dir="${base.jboss.dir}" />
         <for list="bin,client,common,lib" param="jboss-base-directory">
             <sequential>
                 <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.jboss.dir}" fork="true">
                     <arg value="export" />
-                    <arg value="${repo.root.url}/@{jboss-base-directory}" />
+                    <arg value="${jboss-base.repo.url}/@{jboss-base-directory}" />
+                    <classpath>
+                        <pathelement location="${project.dir}/lib/svnkit-1.7.8.jar" />
+                        <pathelement location="${project.dir}/lib/svnkit-cli-1.7.8.jar" />
+                        <pathelement location="${project.dir}/lib/sequence-library-1.0.2.jar" />
+                        <pathelement location="${project.dir}/lib/sqljet-1.1.6.jar" />
+                    </classpath>
+                </java>
+            </sequential>
+        </for>
+        <for list="x86,amd64" param="native">
+            <sequential>
+                <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.native.dir}" fork="true">
+                    <arg value="export" />
+                    <arg value="${jboss-native.repo.url}/@{native}" />
                     <classpath>
                         <pathelement location="${project.dir}/lib/svnkit-1.7.8.jar" />
                         <pathelement location="${project.dir}/lib/svnkit-cli-1.7.8.jar" />
@@ -60,31 +93,37 @@
         </for>
     </target>
     <target name="create-jboss-base-install" depends="checkos" >
-        <echo message="Installing base server onto ${jboss.home}" />
+        <echo message="Installing base server onto ${jboss.home.dest.dir}" />
         <antcall target="checkout-base-from-svn" />
-        <mkdir dir="${jboss.home}" />
-        <copy todir="${jboss.home}">
+        <mkdir dir="${jboss.home.dest.dir}" />
+        <copy todir="${jboss.home.dest.dir}">
             <fileset dir="${base.jboss.dir}" />
         </copy>
         <if> <!-- if on unix then change permissions for scripts -->
             <equals arg1="${isLinux}" arg2="true" />
             <then>
                 <echo message="This is unix platform, changing prermissions on scripts" />
-                <chmod dir="${jboss.home}/bin" perm="a+x"
+                <chmod dir="${jboss.home.dest.dir}/bin" perm="a+x"
                     includes="**/*.sh" verbose="true" />
             </then>
         </if>
         <!-- this is a placeholder for when I have this part ready -->
-        <echo message="Architecture platform is: ${platform.arch}" />
+        <echo message="Architecture platform is: ${os.arch}" />
         <if>
-            <equals arg1="${platform.arch}" arg2="x86" />
+            <equals arg1="${os.arch}" arg2="x86" />
             <then>
-                <echo message="installing native connectors for ${platform.arch}" />
+                <echo message="installing native connectors for ${os.arch}" />
+                <copy todir="${jboss.home.dest.dir}">
+                    <fileset dir="${base.native.dir}/${os.arch}" />
+                </copy>
             </then>
             <elseif>
-                <equals arg1="${platform.arch}" arg2="x64" />
+                <equals arg1="${os.arch}" arg2="amd64" />
                 <then>
-                    <echo message="installing native connectors for ${platform.arch}" />
+                    <echo message="installing native connectors for ${os.arch}" />
+                    <copy todir="${jboss.home.dest.dir}">
+                        <fileset dir="${base.native.dir}/${os.arch}" />
+                    </copy>
                 </then>
             </elseif>
             <else>
@@ -95,10 +134,10 @@
     <target name="checkout-template-from-svn">
         <delete dir="${base.template.dir}" />
         <mkdir dir="${base.template.dir}" />
-        <echo message="Checking out template from ${repo.template.base.url}/${jboss.template.name}" />
+        <echo message="Checking out template from ${jboss-template.base.url}/${jboss.template.name}" />
         <java classname="org.tmatesoft.svn.cli.SVN" dir="${checkout.base.dir}" fork="true">
             <arg value="export" />
-            <arg value="${repo.template.base.url}/${jboss.template.name}" />
+            <arg value="${jboss-template.base.url}/${jboss.template.name}" />
             <classpath>
                 <pathelement location="${project.dir}/lib/svnkit-1.7.8.jar" />
                 <pathelement location="${project.dir}/lib/svnkit-cli-1.7.8.jar" />
@@ -106,6 +145,78 @@
                 <pathelement location="${project.dir}/lib/sqljet-1.1.6.jar" />
             </classpath>
         </java>
+    </target>
+    <target name="checkout-scripts-from-svn">
+        <delete dir="${base.scripts.dir}" />
+        <mkdir dir="${base.scripts.dir}" />
+        <echo message="Checking out template from ${jboss-scripts.repo.url}" />
+        <java classname="org.tmatesoft.svn.cli.SVN" dir="${checkout.base.dir}" fork="true">
+            <arg value="export" />
+            <arg value="${jboss-scripts.repo.url}" />
+            <arg value="${base.scripts.dir}" />
+            <classpath>
+                <pathelement location="${project.dir}/lib/svnkit-1.7.8.jar" />
+                <pathelement location="${project.dir}/lib/svnkit-cli-1.7.8.jar" />
+                <pathelement location="${project.dir}/lib/sequence-library-1.0.2.jar" />
+                <pathelement location="${project.dir}/lib/sqljet-1.1.6.jar" />
+            </classpath>
+        </java>
+    </target>
+    <target name="create-windows-startup-scripts">
+        <if>
+            <and>
+                <equals arg1="${jboss.server.secure}" arg2="true"/>
+                <isset property="jboss.admin.user"/>
+                <isset property="jboss.admin.password"/>
+                <isset property="jboss.java.home"/>
+                <isset property="jboss.server.ip"/>
+                <isset property="jboss.server.mcast"/>
+                <isset property="jboss.server.name"/>
+            </and>
+            <then>
+                <echo message="Creating startup scripts for ${jboss.instance.name}"/>
+                <antcall target="checkout-scripts-from-svn" />
+                <!-- build the proper windows path -->
+                <loadresource property="jboss.java.home.win">
+                    <string value="${jboss.java.home}"/>
+                    <filterchain>
+                        <tokenfilter>
+                            <replacestring from="/" to="\" />
+                        </tokenfilter>
+                    </filterchain>
+                </loadresource>
+                <!-- build admuser parameter -->
+                <property name="admuser" value="-u${jboss.admin.user} -p${jboss.admin.password}"/>
+                <property name="monuser" value="-u${jboss.monitor.user} -p${jboss.monitor.password}"/>
+                <!-- build the authorization string for jmx-console-roles.properties -->
+                <property name="useraccess" value="${jboss.admin.user}=JBossAdmin,HttpInvoker${ls}${jboss.monitor.user}=JBossAdmin,HttpInvoker${ls}" />
+                <!-- build the authorization string for jmx-console-users.properties -->
+                <property name="roleaccess" value="${jboss.admin.user}=${jboss.admin.password}${ls}${jboss.monitor.user}=${jboss.monitor.password}${ls}" />
+                <property name="monuser" value="-u ${jboss.monitor.user} -p ${jboss.monitor.password}"/>
+                <!-- first make replacements on service.bat -->
+                <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="JVM_HOME_TOKEN" value="${jboss.java.home.win}" />
+                <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="SERVERIP_TOKEN" value="${jboss.server.ip}" />
+                <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="MCASTIP_TOKEN" value="${jboss.server.mcast}" />
+                <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="SERVERCFG_TOKEN" value="${jboss.server.name}" />
+                <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="ADMUSER_TOKEN" value="${admuser}" />
+                <!-- then we add the secure user to the jmx permissions file  -->
+                <echo message="########### Adding users to jmx authorization ##############" />
+                <replace file="${base.template.dir}/conf/props/jmx-console-roles.properties" token="admin=JBossAdmin,HttpInvoker" value="${roleaccess}" />
+                <fixcrlf srcdir="${base.template.dir}/conf/props" includes="jmx-console-roles.properties" eol="lf" />
+                <replace file="${base.template.dir}/conf/props/jmx-console-users.properties" token="# admin=admin" value="${useraccess}" />
+                <fixcrlf srcdir="${base.template.dir}/conf/props" includes="jmx-console-users.properties" eol="lf" />
+                <copy verbose="true" file="${base.scripts.dir}/service_TEMPLATE.bat" tofile="${jboss.home.bin.dest.dir}/service_${jboss.server.name}.bat" />
+                <replace file="${base.scripts.dir}/run_TEMPLATE.bat" token="JVM_OPTS_TOKEN" value="${jboss.server.javaopts}" />
+                <copy verbose="true" file="${base.scripts.dir}/run_TEMPLATE.bat" tofile="${jboss.home.bin.dest.dir}/run_${jboss.server.name}.bat" />
+                <delete verbose="true" file="${jboss.home.bin.dest.dir}/run.conf.bat" />
+
+            </then>
+            <else>
+                <echo message="Will not create script unless the proper environment variables are defined"/>
+                <echo message="The properties missing can be jboss.admin.user, jboss.admin.password, jboss.java.home, "/>
+                <echo message="jboss.server.ip, jboss.server.mcast, jboss.server.name or jboss.server.secure"/>
+            </else>
+        </if>
     </target>
     <target name="disable-bshdeployer">
         <if>
@@ -135,7 +246,7 @@
                 </replace>
         	</then>
         </if>
-	</target>
+    </target>
 	<!-- due to intricate dependencies the default datasource can 
 		only be removed if all the other components are removed too -->
     <target name="disable-defaultds">
@@ -242,7 +353,7 @@
             	<delete verbose="true" file="${base.template.dir}/deploy/cluster/farm-deployment-jboss-beans.xml" />
             </then>
         </if>
-	</target>
+    </target>
     <target name="disable-hotdeployer">
         <if>
             <equals arg1="${disable.hotdeployer}" arg2="true" />
@@ -384,7 +495,7 @@
             </then>
         </if>
     </target>
-	<target name="disable-xaresources">
+    <target name="disable-xaresources">
         <if>
             <equals arg1="${disable.xaresources}" arg2="true" />
             <then>
@@ -394,8 +505,8 @@
             	<delete verbose="true" dir="${base.template.dir}/deploy/jboss-xa-jdbc.rar" />
             </then>
         </if>
-	</target>
-	<target name="disable-xnio">
+    </target>
+    <target name="disable-xnio">
         <if>
             <equals arg1="${disable.xnio}" arg2="true" />
             <then>
@@ -406,8 +517,8 @@
             	<delete verbose="true" dir="${base.template.dir}/deployers/xnio.deployer" />
             </then>
         </if>
-	</target>
-	<target name="enable-twg-dir-structure">
+    </target>
+    <target name="enable-twg-dir-structure">
         <if>
             <equals arg1="${enable.twg.dir.structure}" arg2="true" />
             <then>
@@ -468,7 +579,7 @@
 
             </then>
         </if>
-	</target>
+    </target>
 	
     <target name="machine-is-developer">
         <if>

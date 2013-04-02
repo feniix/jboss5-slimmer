@@ -1,13 +1,28 @@
-# JBoss EAP 5.2 Home
-jboss.home=/tmp/checkout/jboss-eap-5.2/jboss-as
-
-repo.root.url=http://fqdn/svn/infrastructure/trunk/jboss5/5.2.0/jboss-eap-5.2-vanilla/jboss-as
-checkout.base.dir=/tmp/co
-
 # Name of generated instance
 jboss.instance.name=localdev
 
-# Profile used as base for slimmed instance (all|default|minimal|production)
+# JBoss EAP 5.2 Home directories
+root.dir=/tmp/
+jboss.home.root=jboss-eap-5.2
+jboss.home=${root.dir}/${jboss.home.root}/${jboss.instance.name}
+
+#
+repo.root.url=http://fqdn/svn/infrastructure
+svn.branch=trunk
+jboss.version=5.2.0
+jboss.brand=jboss-eap-5.2-vanilla
+jboss-native.version=2.0.10
+
+checkout.base.dir=/tmp/co
+
+#Server specific vars
+jboss.java.home=D:/Java/jdk1.6.0_24
+jboss.server.ip=127.0.0.1
+jboss.server.mcast=224.0.0.150
+jboss.server.name=${jboss.instance.name}
+jboss.server.javaopts=-Dtest=true
+
+# Profile used as based for slimmed instance (all|default|minimal|production)
 jboss.template.name=production
 
 disable.bshdeployer=true
@@ -29,5 +44,6 @@ disable.uuid=true
 disable.xaresources=true
 disable.xnio=true
 enable.twg.dir.structure=true
-machine.is.developer=true
+machine.is.developer=false
 set.hotdeployer.timesample=5000
+
