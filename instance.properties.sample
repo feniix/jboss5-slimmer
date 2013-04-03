@@ -8,6 +8,7 @@ jboss.home=${root.dir}/${jboss.home.root}/${jboss.instance.name}
 
 #
 repo.root.url=http://fqdn/svn/infrastructure
+nexus.repo.url=http://fqdn/nexus/content/groups/public
 svn.branch=trunk
 jboss.version=5.2.0
 jboss.brand=jboss-eap-5.2-vanilla
@@ -20,7 +21,11 @@ jboss.java.home=D:/Java/jdk1.6.0_24
 jboss.server.ip=127.0.0.1
 jboss.server.mcast=224.0.0.150
 jboss.server.name=${jboss.instance.name}
-jboss.server.javaopts=-Dtest=true
+jboss.server.javaopts=-Xms1024m -Xmx1024m -XX:MaxPermSize=256m
+jboss.dschecker.version=1.2
+jboss.dschecker.downtime=02:00-03:00
+jboss.newrelic.env=uat
+jboss.messaging.serverpeerid=0
 
 # Profile used as based for slimmed instance (all|default|minimal|production)
 jboss.template.name=production

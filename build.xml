@@ -18,20 +18,24 @@
     <!-- location of the checkout of the template -->
     <property name="base.template.dir" value="${checkout.base.dir}/${jboss.template.name}" />
     <property name="base.scripts.dir" value="${checkout.base.dir}/scripts" />
+    <property name="base.dschecker.dir" value="${checkout.base.dir}/dschecker" />
 
     <!-- path in the svn repository for the checkout -->
     <property name="jboss-base.repo.url" value="${repo.root.url}/${svn.branch}/jboss5/${jboss.version}/${jboss.brand}/jboss-as" />
     <property name="jboss-common.repo.url" value="${repo.root.url}/${svn.branch}/jboss-common" />
     <property name="jboss-native.repo.url" value="${jboss-common.repo.url}/jboss-native-${jboss-native.version}" />
     <property name="jboss-scripts.repo.url" value="${jboss-common.repo.url}/startup-stop-templates" />
+    <property name="jboss-configurations.repo.url" value="${jboss-common.repo.url}/configurations" />
     <property name="jboss-template.base.url" value="${jboss-base.repo.url}/server" />
 
     <!-- Directory destinations -->
     <property name="jboss.home.dest.dir" value="${jboss.home}" />
     <property name="jboss.home.bin.dest.dir" value="${jboss.home}/bin" />
     <property name="jboss.instance.dest.dir" value="${jboss.home.dest.dir}/server/${jboss.instance.name}" />
+
     <!-- line separator prop -->
     <property name="ls" value="${line.separator}" />
+
     <!-- Need to have ant and antcontrib installed in order to run the script -->
     <taskdef resource="net/sf/antcontrib/antlib.xml">
         <classpath>
@@ -41,28 +45,54 @@
     <target name="help">
         <echo message="Use the source Luke." />
     </target>
-    <!-- clean up all the checkouts and the last created instance 
-         USE CAREFULLY
-    -->
-    <target name="dist-clean">
-        <antcall target="clean-template" />
-        <antcall target="clean-jboss-base" />
-        <delete dir="${instance.dest.dir}" />
+
+    <!-- clean up all the checkouts -->
+    <target name="clean-temp">
+        <antcall target="clean-template-checkout" />
+        <antcall target="clean-jboss-base-checkout" />
+        <antcall target="clean-scripts-checkout"/>
+        <antcall target="clean-dschecker-checkout"/>
     </target>
+
     <!-- clean the checked out directories -->
-    <target name="clean-template">
+    <target name="clean-template-checkout">
         <delete dir="${base.template.dir}" />
     </target>
+
     <!-- clean the checked out jboss base directory -->
-    <target name="clean-jboss-base">
+    <target name="clean-jboss-base-checkout">
         <delete dir="${base.jboss.dir}" />
-        <mkdir dir="${base.jboss.dir}" />
         <delete dir="${base.native.dir}" />
-        <mkdir dir="${base.native.dir}" />
+    </target>
+
+    <!-- clean the checked out scripts directory -->
+    <target name="clean-scripts-checkout">
+        <delete dir="${base.scripts.dir}" />
+    </target>
+
+    <!-- clean the checked out scripts directory -->
+    <target name="clean-dschecker-checkout">
+        <delete dir="${base.dschecker.dir}" />
+    </target>
+
+    <target name="remove-current-instance">
+        <input message="The entire server instance located at ${jboss.home.dest.dir} is going to be removed.
+Please make sure the application server service is stopped and you do not have open files in that location.
+Accept? " validargs="y,n" addproperty="do.delete" />
+        <if>
+            <equals arg1="${do.delete}" arg2="y" />
+            <then>
+                <delete verbose="true" dir="${jboss.home.dest.dir}" includeemptydirs="true" />
+            </then>
+            <else>
+                <echo message="Cancelling server removal"/>
+            </else>
+        </if>
     </target>
     <target name="checkout-base-from-svn">
         <echo message="Checking out from ${jboss-base.repo.url} into ${base.jboss.dir}" />
-        <antcall target="clean-jboss-base" />
+        <antcall target="clean-jboss-base-checkout" />
+        <mkdir dir="${base.jboss.dir}" />
         <for list="bin,client,common,lib" param="jboss-base-directory">
             <sequential>
                 <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.jboss.dir}" fork="true">
@@ -77,6 +107,7 @@
                 </java>
             </sequential>
         </for>
+        <mkdir dir="${base.native.dir}" />
         <for list="x86,amd64" param="native">
             <sequential>
                 <java classname="org.tmatesoft.svn.cli.SVN" dir="${base.native.dir}" fork="true">
@@ -132,7 +163,7 @@
         </if>
     </target>
     <target name="checkout-template-from-svn">
-        <delete dir="${base.template.dir}" />
+        <antcall target="clean-template-checkout" />
         <mkdir dir="${base.template.dir}" />
         <echo message="Checking out template from ${jboss-template.base.url}/${jboss.template.name}" />
         <java classname="org.tmatesoft.svn.cli.SVN" dir="${checkout.base.dir}" fork="true">
@@ -147,7 +178,7 @@
         </java>
     </target>
     <target name="checkout-scripts-from-svn">
-        <delete dir="${base.scripts.dir}" />
+        <antcall target="clean-scripts-checkout" />
         <mkdir dir="${base.scripts.dir}" />
         <echo message="Checking out template from ${jboss-scripts.repo.url}" />
         <java classname="org.tmatesoft.svn.cli.SVN" dir="${checkout.base.dir}" fork="true">
@@ -162,12 +193,14 @@
             </classpath>
         </java>
     </target>
-    <target name="create-windows-startup-scripts">
+    <target name="setup-jboss-on-windows">
         <if>
             <and>
                 <equals arg1="${jboss.server.secure}" arg2="true"/>
                 <isset property="jboss.admin.user"/>
                 <isset property="jboss.admin.password"/>
+                <isset property="jboss.monitor.user"/>
+                <isset property="jboss.monitor.password"/>
                 <isset property="jboss.java.home"/>
                 <isset property="jboss.server.ip"/>
                 <isset property="jboss.server.mcast"/>
@@ -186,29 +219,58 @@
                     </filterchain>
                 </loadresource>
                 <!-- build admuser parameter -->
-                <property name="admuser" value="-u${jboss.admin.user} -p${jboss.admin.password}"/>
-                <property name="monuser" value="-u${jboss.monitor.user} -p${jboss.monitor.password}"/>
-                <!-- build the authorization string for jmx-console-roles.properties -->
-                <property name="useraccess" value="${jboss.admin.user}=JBossAdmin,HttpInvoker${ls}${jboss.monitor.user}=JBossAdmin,HttpInvoker${ls}" />
-                <!-- build the authorization string for jmx-console-users.properties -->
-                <property name="roleaccess" value="${jboss.admin.user}=${jboss.admin.password}${ls}${jboss.monitor.user}=${jboss.monitor.password}${ls}" />
-                <property name="monuser" value="-u ${jboss.monitor.user} -p ${jboss.monitor.password}"/>
+                <property name="admuser" value="-u ${jboss.admin.user} -p ${jboss.admin.password}"/>
+
                 <!-- first make replacements on service.bat -->
                 <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="JVM_HOME_TOKEN" value="${jboss.java.home.win}" />
                 <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="SERVERIP_TOKEN" value="${jboss.server.ip}" />
                 <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="MCASTIP_TOKEN" value="${jboss.server.mcast}" />
                 <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="SERVERCFG_TOKEN" value="${jboss.server.name}" />
                 <replace file="${base.scripts.dir}/service_TEMPLATE.bat" token="ADMUSER_TOKEN" value="${admuser}" />
-                <!-- then we add the secure user to the jmx permissions file  -->
-                <echo message="########### Adding users to jmx authorization ##############" />
-                <replace file="${base.template.dir}/conf/props/jmx-console-roles.properties" token="admin=JBossAdmin,HttpInvoker" value="${roleaccess}" />
-                <fixcrlf srcdir="${base.template.dir}/conf/props" includes="jmx-console-roles.properties" eol="lf" />
-                <replace file="${base.template.dir}/conf/props/jmx-console-users.properties" token="# admin=admin" value="${useraccess}" />
-                <fixcrlf srcdir="${base.template.dir}/conf/props" includes="jmx-console-users.properties" eol="lf" />
                 <copy verbose="true" file="${base.scripts.dir}/service_TEMPLATE.bat" tofile="${jboss.home.bin.dest.dir}/service_${jboss.server.name}.bat" />
                 <replace file="${base.scripts.dir}/run_TEMPLATE.bat" token="JVM_OPTS_TOKEN" value="${jboss.server.javaopts}" />
                 <copy verbose="true" file="${base.scripts.dir}/run_TEMPLATE.bat" tofile="${jboss.home.bin.dest.dir}/run_${jboss.server.name}.bat" />
                 <delete verbose="true" file="${jboss.home.bin.dest.dir}/run.conf.bat" />
+
+                <antcall target="clean-dschecker-checkout" />
+                <mkdir dir="${base.dschecker.dir}" />
+                <get src="${jboss-configurations.repo.url}/applications.properties" dest="${base.dschecker.dir}/" /> 
+                <get src="${nexus.repo.url}/com/twg/devinfra/datasource-checker/${jboss.dschecker.version}/datasource-checker-${jboss.dschecker.version}.war"
+                    dest="${base.dschecker.dir}/" />
+                <replace file="${base.dschecker.dir}/applications.properties" token="DSCHECKUSR_TOKEN" value="${jboss.monitor.user}" />
+                <replace file="${base.dschecker.dir}/applications.properties" token="DSCHECKPASS_TOKEN" value="${jboss.monitor.password}" />
+                <condition property="jboss.dschecker.downtime" value="00:02-03:00">
+                    <not>
+                        <isset property="jboss.dschecker.downtime" />
+                    </not>
+                </condition>
+                <replace file="${base.dschecker.dir}/applications.properties" token="DOWNTIME_TOKEN" value="${jboss.dschecker.downtime}" />
+                <condition property="jboss.newrelic.env" value="uat">
+                    <not>
+                        <isset property="jboss.newrelic.env" />
+                    </not>
+                </condition>
+                <replace file="${base.dschecker.dir}/applications.properties" token="NEWRELICENV_TOKEN" value="${jboss.newrelic.env}" />
+                <condition property="jboss.messaging.serverpeerid" value="0">
+                    <not>
+                        <isset property="jboss.messaging.serverpeerid" />
+                    </not>
+                </condition>
+                <replace file="${base.dschecker.dir}/applications.properties" token="MQSERVERPEERID_TOKEN" value="${jboss.messaging.serverpeerid}" />
+                <copy verbose="true" file="${base.dschecker.dir}/applications.properties" tofile="${jboss.instance.dest.dir}/conf/applications.properties" />
+                <copy verbose="true" file="${base.dschecker.dir}/datasource-checker-${jboss.dschecker.version}.war" tofile="${jboss.instance.dest.dir}/deploy/datasource-checker-${jboss.dschecker.version}.war" />
+
+                <!-- build the authorization string for jmx-console-roles.properties -->
+                <property name="roleaccess" value="${jboss.admin.user}=JBossAdmin,HttpInvoker${ls}${jboss.monitor.user}=JBossAdmin,HttpInvoker${ls}" />
+                <!-- build the authorization string for jmx-console-users.properties -->
+                <property name="useraccess" value="${jboss.admin.user}=${jboss.admin.password}${ls}${jboss.monitor.user}=${jboss.monitor.password}${ls}" />
+
+                <!-- then we add the secure user to the jmx permissions file  -->
+                <echo message="########### Adding users to jmx authorization on ${jboss.instance.dest.dir}/conf/props ##############" />
+                <replace file="${jboss.instance.dest.dir}/conf/props/jmx-console-roles.properties" token="admin=JBossAdmin,HttpInvoker" value="${roleaccess}" />
+                <fixcrlf srcdir="${jboss.instance.dest.dir}/conf/props" includes="jmx-console-roles.properties" eol="lf" />
+                <replace file="${jboss.instance.dest.dir}/conf/props/jmx-console-users.properties" token="# admin=admin" value="${useraccess}" />
+                <fixcrlf srcdir="${jboss.instance.dest.dir}/conf/props" includes="jmx-console-users.properties" eol="lf" />
 
             </then>
             <else>
@@ -647,6 +709,11 @@
 
     </target>
     
+    <target name="build-jboss-server-instance">
+        <antcall target="create-jboss-base-install" />
+        <antcall target="create-jboss-instance" />
+        <antcall target="setup-jboss-on-windows" />
+    </target>
     <target name="checkos">
         <condition property="isWindows" value="true">
                 <os family="windows" />
