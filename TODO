@@ -1,9 +1,0 @@
-# Add readme to explain how to use this
-# test running from windows and fix accordingly -- DONE
-# either add ant-contrib to the lib dir or add instruction to make sure nobody forgets about it -- DONE
-# try to use ivy to pull svnkit dependencies from a nexus repo
-# try to use ivy and deploy the jboss binaries to a nexus repo instead of a svn repo
-# add feature to replace configuration snippets in a more gracefull way than using the ant replacement task 
-# add better logging of that the current target is doing
-# create ant tasks to do subversion operations -- DONE
-# provide option to download jboss zip file instead of checking out from svn
