@@ -6,3 +6,4 @@
 # add feature to replace configuration snippets in a more gracefull way than using the ant replacement task 
 # add better logging of that the current target is doing
 # create ant tasks to do subversion operations -- DONE
+# provide option to download jboss zip file instead of checking out from svn
